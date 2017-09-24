@@ -17,19 +17,34 @@ class ViewController: UIViewController {
     @IBOutlet weak var editBarButton: UIBarButtonItem!
     
     //MARK: - Properties
-    var todoArray = ["Learn Swift", "Build Apps", "Change the world!"]
+    var defaultsData = UserDefaults.standard
+    var toDoArray = [String]()
+    var toDoNotesArray = [String]()
+    
+    //MARK: - Constants
+    private let arrayKey = "toDoArray"
+    private let notesKey = "toDoNotesArray"
     
     override func viewDidLoad() {
         super.viewDidLoad()
         tableView.delegate = self
         tableView.dataSource = self
+        
+        toDoArray = defaultsData.stringArray(forKey: arrayKey) ?? [String]()
+        toDoNotesArray = defaultsData.stringArray(forKey: notesKey) ?? [String]()
+    }
+    
+    private func saveDefaultsData() {
+        defaultsData.set(toDoArray, forKey: arrayKey)
+        defaultsData.set(toDoNotesArray, forKey: notesKey)
     }
     
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         if segue.identifier == "EditItem" {
             let destination = segue.destination as! DetailViewController
             let index = tableView.indexPathForSelectedRow!.row
-            destination.toDoItem = todoArray[index]
+            destination.toDoItem = toDoArray[index]
+            destination.toDoNoteItem = toDoNotesArray[index]
         } else {
             if let selectedPath = tableView.indexPathForSelectedRow {
                 tableView.deselectRow(at: selectedPath, animated: false)
@@ -40,15 +55,19 @@ class ViewController: UIViewController {
     @IBAction func unwindFromDetailViewController(segue: UIStoryboardSegue) {
         let sourceViewController = segue.source as! DetailViewController
         let todoItem = sourceViewController.toDoItem!
+        let todoNoteItem = sourceViewController.toDoNoteItem!
         
         if let indexPath = tableView.indexPathForSelectedRow {
-            todoArray[indexPath.row] = todoItem
+            toDoArray[indexPath.row] = todoItem
+            toDoNotesArray[indexPath.row] = todoNoteItem
             tableView.reloadRows(at: [indexPath], with: .automatic)
         } else {
-            let newIndexPath = IndexPath(row: todoArray.count, section: 0)
-            todoArray.append(todoItem)
+            let newIndexPath = IndexPath(row: toDoArray.count, section: 0)
+            toDoArray.append(todoItem)
+            toDoNotesArray.append(todoNoteItem)
             tableView.insertRows(at: [newIndexPath], with: .automatic)
         }
+        saveDefaultsData()
     }
     
     @IBAction func editButtonTapped(_ sender: UIBarButtonItem) {
@@ -68,25 +87,36 @@ class ViewController: UIViewController {
 extension ViewController: UITableViewDataSource {
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "Cell", for: indexPath)
-        cell.textLabel?.text = todoArray[indexPath.row]
+        cell.textLabel?.text = toDoArray[indexPath.row]
+        cell.detailTextLabel?.text = toDoNotesArray[indexPath.row]
         return cell
     }
     
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return todoArray.count
+        return toDoArray.count
     }
     
     func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCellEditingStyle, forRowAt indexPath: IndexPath) {
         if editingStyle == .delete {
-            todoArray.remove(at: indexPath.row)
+            toDoArray.remove(at: indexPath.row)
+            toDoNotesArray.remove(at: indexPath.row)
             tableView.deleteRows(at: [indexPath], with: .fade)
+            
+            saveDefaultsData()
         }
     }
     
     func tableView(_ tableView: UITableView, moveRowAt sourceIndexPath: IndexPath, to destinationIndexPath: IndexPath) {
-        let itemToMove = todoArray[sourceIndexPath.row]
-        todoArray.remove(at: sourceIndexPath.row)
-        todoArray.insert(itemToMove, at: destinationIndexPath.row)
+        let itemToMove = toDoArray[sourceIndexPath.row]
+        let noteToMove = toDoNotesArray[sourceIndexPath.row]
+        
+        toDoArray.remove(at: sourceIndexPath.row)
+        toDoArray.insert(itemToMove, at: destinationIndexPath.row)
+        
+        toDoNotesArray.remove(at: sourceIndexPath.row)
+        toDoNotesArray.insert(noteToMove, at: destinationIndexPath.row)
+        
+        saveDefaultsData()
     }
 }
 
